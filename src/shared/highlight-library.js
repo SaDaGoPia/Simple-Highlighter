@@ -3,6 +3,7 @@
 (() => {
   const STORAGE_KEY = "simpleHighlightsLibrary";
   const MAX_TEXT_LENGTH = 1200;
+  const MAX_CONTEXT_LENGTH = 120;
 
   function createHighlightId() {
     return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
@@ -22,6 +23,19 @@
     }
 
     return `${inputText.slice(0, MAX_TEXT_LENGTH)}...`;
+  }
+
+  function normalizeContext(inputText) {
+    const normalized = normalizeText(inputText);
+    if (!normalized) {
+      return "";
+    }
+
+    if (normalized.length <= MAX_CONTEXT_LENGTH) {
+      return normalized;
+    }
+
+    return normalized.slice(0, MAX_CONTEXT_LENGTH);
   }
 
   function getHostname(urlValue) {
@@ -72,6 +86,8 @@
       pageTitle: typeof record?.pageTitle === "string" ? record.pageTitle : "Untitled page",
       text: normalizedText,
       color: typeof record?.color === "string" ? record.color : "#fae082",
+      prefixContext: normalizeContext(record?.prefixContext),
+      suffixContext: normalizeContext(record?.suffixContext),
       createdAt: new Date().toISOString()
     };
 
