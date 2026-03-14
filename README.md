@@ -1,8 +1,28 @@
 # Simple Highlights (Chrome Extension)
 
-Extension base para Google Chrome (Manifest V3) que permite resaltar texto seleccionado por el usuario en cualquier pagina web.
+Simple Highlights is a Manifest V3 Chrome extension for selecting, highlighting, storing, restoring, and browsing highlighted text across web pages.
 
-## Estructura del proyecto
+## Language Note
+
+The extension interface is currently in Spanish (labels, helper text, and most user-facing messages), while this README is fully written in English.
+
+## Current Features
+
+- Floating toolbar appears near text selections.
+- `Highlight` action applies highlights using the currently selected color.
+- Color picker includes 4 pastel options and remembers the latest choice during the session.
+- Hovering a highlight shows a `Remove` button with delayed auto-hide and fade-out.
+- Highlights are stored persistently in `chrome.storage.local`.
+- Each record stores: id, URL, hostname, page title, text, color, timestamp, and restore context.
+- Automatic highlight restoration on page load for the current URL.
+- Advanced restoration supports multi-node matches and context-based disambiguation.
+- Popup library displays stored highlights.
+- Popup search supports accent-insensitive and special-character-tolerant matching.
+- Popup includes sort modes: relevance, newest, oldest, and site A-Z.
+- Popup can toggle grouping by website on/off.
+- Popup preferences (sort mode and grouping) persist across popup sessions.
+
+## Project Structure
 
 ```text
 SIMPLE-HIGHLIGHTS/
@@ -28,43 +48,34 @@ SIMPLE-HIGHLIGHTS/
       highlight-library.js
 ```
 
-## Caracteristicas actuales
+## Security and Platform Notes
 
-- Al seleccionar texto con el cursor, aparece un panel flotante cerca de la seleccion.
-- El panel muestra `Highlight` para aplicar el resaltado.
-- El panel muestra `Color: ...` con un menu pequeno desplegable de 4 colores pastel.
-- `Highlight` usa el ultimo color elegido durante la sesion.
-- Al pasar el cursor sobre un texto subrayado, aparece un boton `Remove` para eliminar ese highlight.
-- Cada resaltado se guarda en una biblioteca persistente con URL, sitio, titulo de pagina, texto, color y fecha.
-- Al abrir el popup de la extension, la biblioteca muestra los subrayados agrupados por sitio web.
-- Resaltado visual seguro en el DOM usando `Range`/`Selection` y nodos creados con `createElement` + `textContent`.
-- Arquitectura modular para crecer con nuevas funciones sin acoplamiento.
-
-## Seguridad aplicada
-
-- Manifest V3 con `service_worker` (sin background pages).
-- CSP estricta para paginas de extension:
+- Uses Chrome Extension Manifest V3 and a background service worker.
+- Strict extension page CSP:
   - `script-src 'self'`
   - `object-src 'none'`
   - `base-uri 'none'`
-- Sin uso de `eval()`, `innerHTML` ni APIs deprecadas.
-- Permisos minimos: `storage` para persistir color de sesion.
+- Does not use `eval()` or `innerHTML` for dynamic UI content.
+- Uses minimal permission scope (`storage`) for persistence.
 
-## Cargar la extension en Chrome (modo desarrollador)
+## Load in Chrome (Developer Mode)
 
-1. Abre Chrome y navega a `chrome://extensions/`.
-2. Activa **Developer mode**.
-3. Haz clic en **Load unpacked**.
-4. Selecciona la carpeta `SIMPLE-HIGHLIGHTS`.
-5. Abre cualquier pagina web y selecciona texto.
-6. Aparecera un panel junto a la seleccion con `Highlight` y `Color: ...`.
-7. Pulsa `Color: ...` para abrir el menu pequeno y elegir un color pastel.
-8. Pulsa `Highlight` para aplicar el resaltado con el color activo.
-9. Haz click en el icono de la extension para abrir la biblioteca.
-10. Revisa los highlights agrupados por sitio web dentro del popup.
+1. Open Chrome and go to `chrome://extensions/`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select the `SIMPLE-HIGHLIGHTS` folder.
+5. Open any website and select text.
+6. Use `Highlight` and `Color` from the floating toolbar.
+7. Open the extension popup to browse, search, sort, and group saved highlights.
 
-## Notas para evolucion futura
+## Implementation Notes
 
-- Agregar persistencia de resaltados por URL usando `chrome.storage`.
-- Incorporar popup/options page para configurar color y comportamiento.
-- Registrar mensajes entre content script y service worker para funciones avanzadas.
+- Highlight rendering is done with safe DOM operations (`Range`, `Selection`, `createElement`, `textContent`).
+- Restoration includes a retry pass for late-rendered page content.
+- Search normalization removes diacritics and non-alphanumeric separators to improve average-user matching behavior.
+
+## Suggested Next Improvements
+
+- Add one-click jump from popup item to highlighted location on the active page.
+- Add export/import for highlight library backups.
+- Add optional sync support (`chrome.storage.sync`) for cross-device preferences.

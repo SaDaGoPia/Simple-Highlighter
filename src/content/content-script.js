@@ -6,6 +6,7 @@
   const highlighterModule = globalThis.SimpleHighlightsHighlighter;
   const toolbarModule = globalThis.SimpleHighlightsFloatingToolbar;
   const libraryModule = globalThis.SimpleHighlightsLibrary;
+  const RESTORE_CONTEXT_LENGTH = 48;
 
   if (!selectionModule || !stateModule || !highlighterModule || !toolbarModule || !libraryModule) {
     return;
@@ -14,6 +15,9 @@
   let selectedRangeForAction = null;
   let hoveredHighlightId = "";
   let hideDeleteButtonTimeoutId = 0;
+  let hideDeleteButtonFadeTimeoutId = 0;
+  const DELETE_BUTTON_HIDE_DELAY_MS = 1500;
+  const DELETE_BUTTON_FADE_DURATION_MS = 180;
 
   const toolbar = toolbarModule.createFloatingToolbar({
     onHighlight: applyHighlight,
@@ -27,8 +31,8 @@
   function createDeleteButton() {
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = "x";
-    button.setAttribute("aria-label", "Eliminar subrayado");
+    button.textContent = "Remove";
+    button.setAttribute("aria-label", "Remove highlight");
     button.style.position = "fixed";
     button.style.left = "0";
     button.style.top = "0";
@@ -41,12 +45,13 @@
     button.style.color = "#0f172a";
     button.style.cursor = "pointer";
     button.style.fontFamily = '"Segoe UI", Tahoma, sans-serif';
-    button.style.fontSize = "14px";
+    button.style.fontSize = "12px";
     button.style.fontWeight = "600";
-    button.style.width = "28px";
-    button.style.height = "28px";
-    button.style.padding = "0";
+    button.style.padding = "7px 10px";
     button.style.lineHeight = "1";
+    button.style.opacity = "0";
+    button.style.pointerEvents = "none";
+    button.style.transition = `opacity ${DELETE_BUTTON_FADE_DURATION_MS}ms ease`;
     button.style.display = "none";
 
     button.addEventListener("mousedown", (event) => {
@@ -55,6 +60,9 @@
 
     button.addEventListener("mouseenter", () => {
       window.clearTimeout(hideDeleteButtonTimeoutId);
+      window.clearTimeout(hideDeleteButtonFadeTimeoutId);
+      button.style.opacity = "1";
+      button.style.pointerEvents = "auto";
     });
 
     button.addEventListener("mouseleave", () => {
@@ -88,11 +96,35 @@
   }
 
   function hideDeleteButton() {
+    window.clearTimeout(hideDeleteButtonFadeTimeoutId);
+
     if (hoveredHighlightId) {
       highlighterModule.setHoverState(hoveredHighlightId, false);
     }
 
     hoveredHighlightId = "";
+    if (deleteButton.style.display === "none") {
+      return;
+    }
+
+    deleteButton.style.opacity = "0";
+    deleteButton.style.pointerEvents = "none";
+    hideDeleteButtonFadeTimeoutId = window.setTimeout(() => {
+      deleteButton.style.display = "none";
+    }, DELETE_BUTTON_FADE_DURATION_MS);
+  }
+
+  function hideDeleteButtonImmediately() {
+    window.clearTimeout(hideDeleteButtonTimeoutId);
+    window.clearTimeout(hideDeleteButtonFadeTimeoutId);
+
+    if (hoveredHighlightId) {
+      highlighterModule.setHoverState(hoveredHighlightId, false);
+    }
+
+    hoveredHighlightId = "";
+    deleteButton.style.opacity = "0";
+    deleteButton.style.pointerEvents = "none";
     deleteButton.style.display = "none";
   }
 
@@ -100,7 +132,7 @@
     window.clearTimeout(hideDeleteButtonTimeoutId);
     hideDeleteButtonTimeoutId = window.setTimeout(() => {
       hideDeleteButton();
-    }, 120);
+    }, DELETE_BUTTON_HIDE_DELAY_MS);
   }
 
   function showDeleteButtonForHighlight(highlightElement) {
@@ -110,6 +142,7 @@
     }
 
     window.clearTimeout(hideDeleteButtonTimeoutId);
+    window.clearTimeout(hideDeleteButtonFadeTimeoutId);
 
     if (hoveredHighlightId && hoveredHighlightId !== highlightId) {
       highlighterModule.setHoverState(hoveredHighlightId, false);
@@ -122,6 +155,8 @@
     const margin = 8;
 
     deleteButton.style.display = "block";
+    deleteButton.style.opacity = "1";
+    deleteButton.style.pointerEvents = "auto";
 
     const buttonRect = deleteButton.getBoundingClientRect();
     const desiredTop = targetRect.top - buttonRect.height - margin;
@@ -185,14 +220,76 @@
     await stateModule.setSelectedColor(colorValue);
   }
 
-  async function saveHighlightRecord(highlightId, selectedText, selectedColor) {
+  function normalizeContextText(inputText) {
+    if (typeof inputText !== "string") {
+      return "";
+    }
+
+    return inputText.replace(/\s+/g, " ").trim();
+  }
+
+  function getSelectionContext(range) {
+    if (!range || !document.body) {
+      return {
+        prefixContext: "",
+        suffixContext: ""
+      };
+    }
+
+    try {
+      const prefixRange = document.createRange();
+      prefixRange.selectNodeContents(document.body);
+      prefixRange.setEnd(range.startContainer, range.startOffset);
+
+      const suffixRange = document.createRange();
+      suffixRange.selectNodeContents(document.body);
+      suffixRange.setStart(range.endContainer, range.endOffset);
+
+      const prefixText = normalizeContextText(prefixRange.toString()).slice(-RESTORE_CONTEXT_LENGTH);
+      const suffixText = normalizeContextText(suffixRange.toString()).slice(0, RESTORE_CONTEXT_LENGTH);
+
+      return {
+        prefixContext: prefixText,
+        suffixContext: suffixText
+      };
+    } catch (_error) {
+      return {
+        prefixContext: "",
+        suffixContext: ""
+      };
+    }
+  }
+
+  async function saveHighlightRecord(highlightId, selectedText, selectedColor, selectionContext) {
     await libraryModule.addHighlight({
       id: highlightId,
       url: window.location.href,
       pageTitle: document.title,
       text: selectedText,
-      color: selectedColor
+      color: selectedColor,
+      prefixContext: selectionContext?.prefixContext || "",
+      suffixContext: selectionContext?.suffixContext || ""
     });
+  }
+
+  async function restoreHighlightsForCurrentPage() {
+    const savedItems = await libraryModule.getLibrary();
+    const currentUrl = window.location.href;
+    const pageItems = savedItems.filter((item) => item?.url === currentUrl);
+
+    if (pageItems.length === 0) {
+      return;
+    }
+
+    const restoredCount = highlighterModule.restoreHighlights(pageItems);
+    if (restoredCount >= pageItems.length) {
+      return;
+    }
+
+    // Reintento corto para contenido que aparece despues de document_idle.
+    window.setTimeout(() => {
+      highlighterModule.restoreHighlights(pageItems);
+    }, 800);
   }
 
   function applyHighlight() {
@@ -202,6 +299,7 @@
 
     const selectedText = selectedRangeForAction.toString().trim();
     const selectedColor = stateModule.getSelectedColor().value;
+    const selectionContext = getSelectionContext(selectedRangeForAction);
     const highlightId = libraryModule.createHighlightId();
     const highlightedSegments = highlighterModule.highlightRange(
       selectedRangeForAction,
@@ -210,7 +308,7 @@
     );
 
     if (highlightedSegments > 0) {
-      saveHighlightRecord(highlightId, selectedText, selectedColor);
+      saveHighlightRecord(highlightId, selectedText, selectedColor, selectionContext);
       selectedRangeForAction = null;
       window.getSelection()?.removeAllRanges();
       toolbar.hide();
@@ -223,7 +321,7 @@
     }
 
     toolbar.hide();
-    hideDeleteButton();
+    hideDeleteButtonImmediately();
   }
 
   function handleDocumentScroll() {
@@ -231,7 +329,7 @@
       toolbar.hide();
     }
 
-    hideDeleteButton();
+    hideDeleteButtonImmediately();
   }
 
   function handleKeyUp(event) {
@@ -269,7 +367,7 @@
     scheduleDeleteButtonHide();
   }
 
-  stateModule.initialize().then(() => {
+  Promise.all([stateModule.initialize(), restoreHighlightsForCurrentPage()]).then(() => {
     toolbar.updateColorLabel();
   });
 

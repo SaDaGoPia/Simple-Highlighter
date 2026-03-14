@@ -13,6 +13,24 @@
         <p>Subrayados agrupados por sitio web</p>
       </header>
 
+      <section class="search-wrap" aria-label="Buscar subrayados">
+        <input
+          id="library-search"
+          class="search-input"
+          type="search"
+          placeholder="Buscar por texto, titulo o sitio"
+          autocomplete="off"
+        />
+        <div class="search-controls">
+          <button id="sort-mode-button" class="control-button" type="button" aria-label="Cambiar orden">
+            Orden: Relevancia
+          </button>
+          <button id="group-toggle-button" class="control-button" type="button" aria-pressed="true" aria-label="Agrupar por sitio web">
+            Agrupar: Sitio
+          </button>
+        </div>
+      </section>
+
       <section id="library-content" class="library-content" aria-live="polite"></section>
     </main>
 

@@ -28,6 +28,54 @@ body {
   color: #475569;
 }
 
+.search-wrap {
+  margin-bottom: 10px;
+}
+
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d5deeb;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.search-controls {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.control-button {
+  flex: 1;
+  border: 1px solid #d5deeb;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+.control-button:hover {
+  background: #f8fbff;
+}
+
+.control-button:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
 .site-group {
   background: #ffffff;
   border: 1px solid #dce3ef;
