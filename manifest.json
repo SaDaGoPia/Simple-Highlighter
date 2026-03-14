@@ -1,0 +1,39 @@
+{
+  "name": "Simple Highlights",
+  "description": "Resalta texto seleccionado por el usuario en cualquier sitio web.",
+  "version": "0.1.0",
+  "manifest_version": 3,
+  "minimum_chrome_version": "114",
+  "action": {
+    "default_title": "Simple Highlights",
+    "default_popup": "src/popup/popup.html"
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content/modules/selection.js",
+        "src/content/modules/state.js",
+        "src/content/modules/highlighter.js",
+        "src/content/modules/floating-toolbar.js",
+        "src/shared/highlight-library.js",
+        "src/content/content-script.js"
+      ],
+      "css": [
+        "src/content/styles/highlight.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none';"
+  }
+}
